@@ -23,6 +23,16 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
+### Run with Docker Compose
+
+```bash
+docker compose up --build -d
+```
+
+- **Backend:** http://localhost:8001 (Swagger docs: http://localhost:8001/docs)
+- **Frontend:** http://localhost:8002
+```
+
 ## Running Automated Tests
 
 ```bash
