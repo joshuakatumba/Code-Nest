@@ -36,7 +36,7 @@ def build_course_progress_data(
         .order_by(Module.order.asc())
         .all()
     )
-    module_ids = [mod.id for mod in modules]
+    module_ids = [module.id for module in modules]
     lessons = (
         db.query(Lesson)
         .filter(Lesson.module_id.in_(module_ids))
@@ -45,7 +45,7 @@ def build_course_progress_data(
         if module_ids
         else []
     )
-    lesson_ids = [les.id for les in lessons]
+    lesson_ids = [lesson.id for lesson in lessons]
     progress_rows = (
         db.query(LessonProgress)
         .filter(
@@ -59,50 +59,62 @@ def build_course_progress_data(
     )
     completed_lesson_ids = {row.lesson_id for row in progress_rows}
 
-    lessons_by_module: dict[int, list[LessonResponse]] = {mod.id: [] for mod in modules}
-    module_total_counts: dict[int, int] = {mod.id: 0 for mod in modules}
-    module_done_counts: dict[int, int] = {mod.id: 0 for mod in modules}
+    lessons_by_module: dict[int, list[LessonResponse]] = {
+        module.id: [] for module in modules
+    }
+    module_total_counts: dict[int, int] = {module.id: 0 for module in modules}
+    module_done_counts: dict[int, int] = {module.id: 0 for module in modules}
 
-    for les in lessons:
-        is_done = les.id in completed_lesson_ids
-        module_total_counts[les.module_id] = module_total_counts.get(les.module_id, 0) + 1
-        if is_done:
-            module_done_counts[les.module_id] = module_done_counts.get(les.module_id, 0) + 1
-        lessons_by_module[les.module_id].append(
+    for lesson in lessons:
+        is_completed = lesson.id in completed_lesson_ids
+        module_total_counts[lesson.module_id] = (
+            module_total_counts.get(lesson.module_id, 0) + 1
+        )
+        if is_completed:
+            module_done_counts[lesson.module_id] = (
+                module_done_counts.get(lesson.module_id, 0) + 1
+            )
+        lessons_by_module[lesson.module_id].append(
             LessonResponse(
-                id=les.id,
-                module_id=les.module_id,
-                title=les.title,
-                duration_label=les.duration_label,
-                order=les.order,
-                video_url=les.video_url,
-                is_locked_default=les.is_locked_default,
-                completed=is_done,
+                id=lesson.id,
+                module_id=lesson.module_id,
+                title=lesson.title,
+                duration_label=lesson.duration_label,
+                order=lesson.order,
+                video_url=lesson.video_url,
+                is_locked_default=lesson.is_locked_default,
+                completed=is_completed,
             )
         )
 
     completed_modules = 0
     module_responses: list[ModuleResponse] = []
-    for mod in modules:
-        tot = module_total_counts.get(mod.id, 0)
-        done = module_done_counts.get(mod.id, 0)
-        if tot > 0 and done > 0:
+    for module in modules:
+        module_total = module_total_counts.get(module.id, 0)
+        module_done = module_done_counts.get(module.id, 0)
+        if module_total > 0 and module_done > 0:
             completed_modules += 1
         module_responses.append(
             ModuleResponse(
-                id=mod.id,
-                course_id=mod.course_id,
-                title=mod.title,
-                duration_label=mod.duration_label,
-                order=mod.order,
-                lessons=lessons_by_module.get(mod.id, []),
+                id=module.id,
+                course_id=module.course_id,
+                title=module.title,
+                duration_label=module.duration_label,
+                order=module.order,
+                lessons=lessons_by_module.get(module.id, []),
             )
         )
 
     total_lessons = len(lessons)
     completed_count = len(completed_lesson_ids)
     total_modules = len(modules)
-    return module_responses, completed_count, total_lessons, completed_modules, total_modules
+    return (
+        module_responses,
+        completed_count,
+        total_lessons,
+        completed_modules,
+        total_modules,
+    )
 
 
 @router.get("/progress", response_model=ProgressResponse)
@@ -146,15 +158,21 @@ def get_progress(
     quizzes = db.query(Quiz).order_by(Quiz.id.asc()).all()
 
     return ProgressResponse(
-        competencies=[CompetencyResponse.model_validate(c) for c in competencies],
-        enrollments=[EnrollmentResponse.model_validate(e) for e in enrollments],
+        competencies=[
+            CompetencyResponse.model_validate(competency)
+            for competency in competencies
+        ],
+        enrollments=[
+            EnrollmentResponse.model_validate(enrollment)
+            for enrollment in enrollments
+        ],
         completed=completed_count,
         total=total_lessons,
         completed_modules=completed_modules,
         total_modules=total_modules,
-        projects=[ProjectResponse.model_validate(p) for p in projects],
+        projects=[ProjectResponse.model_validate(project) for project in projects],
         modules=module_responses,
-        quizzes=[QuizListItemResponse.model_validate(q) for q in quizzes],
+        quizzes=[QuizListItemResponse.model_validate(quiz) for quiz in quizzes],
     )
 
 
@@ -172,7 +190,7 @@ def complete_lesson(
         )
 
     module = db.query(Module).filter(Module.id == lesson.module_id).first()
-    course_id_val = module.course_id if module else 1
+    course_id_value = module.course_id if module else 1
 
     progress = (
         db.query(LessonProgress)
@@ -202,8 +220,8 @@ def complete_lesson(
         .all()
     )
     if newly_completed:
-        for comp in competencies:
-            comp.percent = min(100, comp.percent + 5)
+        for competency in competencies:
+            competency.percent = min(100, competency.percent + 5)
 
     db.commit()
 
@@ -213,12 +231,15 @@ def complete_lesson(
         total_lessons,
         completed_modules,
         total_modules,
-    ) = build_course_progress_data(db, current_user.id, course_id_val)
+    ) = build_course_progress_data(db, current_user.id, course_id_value)
 
     return LessonCompleteResponse(
         lesson_id=lesson_id,
         completed=True,
-        competencies=[CompetencyResponse.model_validate(c) for c in competencies],
+        competencies=[
+            CompetencyResponse.model_validate(competency)
+            for competency in competencies
+        ],
         completed_count=completed_count,
         total_lessons=total_lessons,
         completed_modules=completed_modules,

@@ -27,15 +27,15 @@ def compute_review_summary(db: Session, course_id: int) -> ReviewSummaryResponse
     counts: dict[str, int] = {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
     total_reviews = 0
     weighted_sum = 0
-    for stars_val, count_val in rows:
-        key = str(stars_val)
+    for stars_value, count_value in rows:
+        key = str(stars_value)
         if key in counts:
-            counts[key] = int(count_val)
-            total_reviews += int(count_val)
-            weighted_sum += int(stars_val) * int(count_val)
+            counts[key] = int(count_value)
+            total_reviews += int(count_value)
+            weighted_sum += int(stars_value) * int(count_value)
 
-    avg_score = round(weighted_sum / total_reviews, 1) if total_reviews > 0 else 0.0
-    return ReviewSummaryResponse(avg=avg_score, counts=counts, total=total_reviews)
+    average_score = round(weighted_sum / total_reviews, 1) if total_reviews > 0 else 0.0
+    return ReviewSummaryResponse(avg=average_score, counts=counts, total=total_reviews)
 
 
 @router.get("", response_model=list[CourseResponse])
@@ -67,7 +67,7 @@ def get_course_detail(
         .order_by(Module.order.asc())
         .all()
     )
-    module_ids = [mod.id for mod in modules]
+    module_ids = [module.id for module in modules]
     lessons = (
         db.query(Lesson)
         .filter(Lesson.module_id.in_(module_ids))
@@ -77,7 +77,9 @@ def get_course_detail(
         else []
     )
 
-    lessons_by_module: dict[int, list[LessonResponse]] = {mod.id: [] for mod in modules}
+    lessons_by_module: dict[int, list[LessonResponse]] = {
+        module.id: [] for module in modules
+    }
     for lesson in lessons:
         lessons_by_module[lesson.module_id].append(
             LessonResponse.model_validate(lesson)
@@ -85,14 +87,14 @@ def get_course_detail(
 
     module_responses = [
         ModuleResponse(
-            id=mod.id,
-            course_id=mod.course_id,
-            title=mod.title,
-            duration_label=mod.duration_label,
-            order=mod.order,
-            lessons=lessons_by_module.get(mod.id, []),
+            id=module.id,
+            course_id=module.course_id,
+            title=module.title,
+            duration_label=module.duration_label,
+            order=module.order,
+            lessons=lessons_by_module.get(module.id, []),
         )
-        for mod in modules
+        for module in modules
     ]
 
     rating_breakdown = compute_review_summary(db, course.id)

@@ -30,12 +30,12 @@ def get_quiz(quiz_id: int, db: Session = Depends(get_db)) -> QuizDetailResponse:
     )
     public_questions = [
         QuestionPublicResponse(
-            id=q.id,
-            quiz_id=q.quiz_id,
-            prompt=q.prompt,
-            options=q.options,
+            id=question.id,
+            quiz_id=question.quiz_id,
+            prompt=question.prompt,
+            options=question.options,
         )
-        for q in questions
+        for question in questions
     ]
     return QuizDetailResponse(
         id=quiz.id,
@@ -72,8 +72,8 @@ def submit_quiz(
 
     score = 0
     results: list[QuestionResultItem] = []
-    for idx, question in enumerate(questions):
-        selected = payload.answers[idx] if idx < len(payload.answers) else -1
+    for i, question in enumerate(questions):
+        selected = payload.answers[i] if i < len(payload.answers) else -1
         is_correct = selected == question.correct_index
         if is_correct:
             score += 1
