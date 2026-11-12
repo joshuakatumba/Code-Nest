@@ -113,7 +113,7 @@ export default function CourseDetail() {
       const updated = await api.uploadCourseVideo(course.id, file);
       setCourse(updated);
       setPreviewVideoUrl(updated.video_url);
-      setPreviewTitle(`${updated.title} (Course Video)`);
+      setPreviewTitle(updated.title);
       setStatusMessage(`Uploaded course video "${file.name}".`);
     } catch (error) {
       setErrorMessage(error.message || 'Could not upload course video');
@@ -244,10 +244,6 @@ export default function CourseDetail() {
       ? Math.round(((course.old_price_usd - course.price_usd) / course.old_price_usd) * 100)
       : 50;
   const moduleCount = course.modules && course.modules.length > 0 ? course.modules.length : 1;
-  const totalLessonsCount = (course.modules || []).reduce(
-    (sum, mod) => sum + (mod.lessons ? mod.lessons.length : 0),
-    0
-  );
   const bannerLabel =
     course.level === 1 ? 'Scratch' : course.level === 3 ? 'Tkinter' : 'Python';
   const bannerAccent =
@@ -350,38 +346,26 @@ export default function CourseDetail() {
               className={`btn-overview-tab ${activeTab === 'curriculum' ? 'active-tab' : ''}`}
               onClick={() => setActiveTab('curriculum')}
             >
-              Curriculum &amp; Videos ({totalLessonsCount})
+              Curriculum
             </button>
             <button
               type="button"
               className={`btn-overview-tab ${activeTab === 'reviews' ? 'active-tab' : ''}`}
               onClick={() => setActiveTab('reviews')}
             >
-              Reviews ({breakdown.total})
+              Reviews
             </button>
           </div>
 
           <div className="course-detail-header">
             <h1>{course.title}</h1>
             <p>{course.description}</p>
-            <div className="course-detail-meta">
-              <span>{course.tech}</span>
-              <span>{course.grade_range}</span>
-              <span>Builds: {course.builds}</span>
-            </div>
           </div>
 
           {(activeTab === 'overview' || activeTab === 'curriculum') &&
             course.modules &&
             course.modules.length > 0 && (
               <div className="course-modules-preview">
-                <div className="curriculum-header-row">
-                  <h3>Curriculum Modules &amp; Video Management</h3>
-                  <span className="badge-level">
-                    Click a module to play or upload lesson videos
-                  </span>
-                </div>
-
                 {course.modules.map((module) => {
                   const isOpen = openModuleId === module.id;
                   return (
@@ -446,24 +430,26 @@ export default function CourseDetail() {
                                   </span>
                                 </div>
 
-                                <div className="detail-lesson-actions">
-                                  <label className="btn-mark-complete upload-lesson-btn">
-                                    <i className="fa-solid fa-upload"></i>{' '}
-                                    {isUploadingThis ? 'Uploading...' : 'Upload Video'}
-                                    <input
-                                      type="file"
-                                      accept="video/mp4,video/webm,video/ogg,video/*"
-                                      disabled={isUploadingThis}
-                                      onChange={(event) => {
-                                        const file = event.target.files?.[0];
-                                        if (file) {
-                                          handleLessonVideoUpload(lesson.id, file);
-                                        }
-                                      }}
-                                      hidden
-                                    />
-                                  </label>
-                                </div>
+                                {user && (
+                                  <div className="detail-lesson-actions">
+                                    <label className="btn-mark-complete upload-lesson-btn">
+                                      <i className="fa-solid fa-upload"></i>{' '}
+                                      {isUploadingThis ? 'Uploading...' : 'Upload Video'}
+                                      <input
+                                        type="file"
+                                        accept="video/mp4,video/webm,video/ogg,video/*"
+                                        disabled={isUploadingThis}
+                                        onChange={(event) => {
+                                          const file = event.target.files?.[0];
+                                          if (file) {
+                                            handleLessonVideoUpload(lesson.id, file);
+                                          }
+                                        }}
+                                        hidden
+                                      />
+                                    </label>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -473,62 +459,64 @@ export default function CourseDetail() {
                   );
                 })}
 
-                <form
-                  className="add-lesson-card"
-                  onSubmit={handleCreateLessonWithVideo}
-                >
-                  <h4>Add New Lesson &amp; Upload Video</h4>
-                  <div className="add-lesson-grid">
-                    <select
-                      aria-label="Target Module"
-                      className="form-input"
-                      value={newLessonModuleId}
-                      onChange={(event) => setNewLessonModuleId(event.target.value)}
-                    >
-                      {course.modules.map((mod) => (
-                        <option key={mod.id} value={mod.id}>
-                          {mod.title}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Lesson Title (e.g. 4. Loops Practice)"
-                      value={newLessonTitle}
-                      onChange={(event) => setNewLessonTitle(event.target.value)}
-                      required
-                    />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Duration (e.g. 25:00)"
-                      value={newLessonDuration}
-                      onChange={(event) => setNewLessonDuration(event.target.value)}
-                    />
-                  </div>
-                  <div className="add-lesson-bottom">
-                    <label className="btn-details upload-card-label">
-                      <i className="fa-solid fa-file-video"></i>{' '}
-                      {newLessonFile ? newLessonFile.name : 'Choose Lesson Video File (Optional)'}
+                {user && (
+                  <form
+                    className="add-lesson-card"
+                    onSubmit={handleCreateLessonWithVideo}
+                  >
+                    <h4>Add New Lesson &amp; Upload Video</h4>
+                    <div className="add-lesson-grid">
+                      <select
+                        aria-label="Target Module"
+                        className="form-input"
+                        value={newLessonModuleId}
+                        onChange={(event) => setNewLessonModuleId(event.target.value)}
+                      >
+                        {course.modules.map((mod) => (
+                          <option key={mod.id} value={mod.id}>
+                            {mod.title}
+                          </option>
+                        ))}
+                      </select>
                       <input
-                        type="file"
-                        accept="video/mp4,video/webm,video/ogg,video/*"
-                        onChange={(event) =>
-                          setNewLessonFile(event.target.files?.[0] || null)
-                        }
-                        hidden
+                        type="text"
+                        className="form-input"
+                        placeholder="Lesson Title"
+                        value={newLessonTitle}
+                        onChange={(event) => setNewLessonTitle(event.target.value)}
+                        required
                       />
-                    </label>
-                    <button
-                      type="submit"
-                      className="btn-enroll"
-                      disabled={addingLesson}
-                    >
-                      {addingLesson ? 'Saving Lesson...' : 'Add Lesson'}
-                    </button>
-                  </div>
-                </form>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Duration"
+                        value={newLessonDuration}
+                        onChange={(event) => setNewLessonDuration(event.target.value)}
+                      />
+                    </div>
+                    <div className="add-lesson-bottom">
+                      <label className="btn-details upload-card-label">
+                        <i className="fa-solid fa-file-video"></i>{' '}
+                        {newLessonFile ? newLessonFile.name : 'Choose Lesson Video File'}
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm,video/ogg,video/*"
+                          onChange={(event) =>
+                            setNewLessonFile(event.target.files?.[0] || null)
+                          }
+                          hidden
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="btn-enroll"
+                        disabled={addingLesson}
+                      >
+                        {addingLesson ? 'Saving Lesson...' : 'Add Lesson'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             )}
 
@@ -555,7 +543,7 @@ export default function CourseDetail() {
                       );
                     })}
                   </div>
-                  <span>Top Rating ({breakdown.total} reviews)</span>
+                  <span>Top Rating</span>
                 </div>
 
                 <div className="rating-bars">
@@ -577,24 +565,26 @@ export default function CourseDetail() {
                 </div>
               </div>
 
-              <div className="rate-course-bar">
-                <span>Rate this course:</span>
-                <div className="rate-star-buttons">
-                  {[1, 2, 3, 4, 5].map((starValue) => (
-                    <button
-                      key={starValue}
-                      type="button"
-                      className={`btn-star-rate ${
-                        selectedStars >= starValue ? 'active' : ''
-                      }`}
-                      disabled={submittingReview}
-                      onClick={() => handleSubmitReview(starValue)}
-                    >
-                      <i className="fa-solid fa-star"></i> {starValue}
-                    </button>
-                  ))}
+              {user && (
+                <div className="rate-course-bar">
+                  <span>Rate this course:</span>
+                  <div className="rate-star-buttons">
+                    {[1, 2, 3, 4, 5].map((starValue) => (
+                      <button
+                        key={starValue}
+                        type="button"
+                        className={`btn-star-rate ${
+                          selectedStars >= starValue ? 'active' : ''
+                        }`}
+                        disabled={submittingReview}
+                        onClick={() => handleSubmitReview(starValue)}
+                      >
+                        <i className="fa-solid fa-star"></i> {starValue}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -611,22 +601,24 @@ export default function CourseDetail() {
             </video>
           </div>
 
-          <div className="checkout-video-meta">
-            <span className="playing-now-label">
-              <i className="fa-solid fa-film"></i> {previewTitle || course.title}
-            </span>
-            <label className="btn-mark-complete upload-lesson-btn">
-              <i className="fa-solid fa-cloud-arrow-up"></i>{' '}
-              {uploadingCourseVideo ? 'Uploading...' : 'Upload Course Video'}
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/ogg,video/*"
-                disabled={uploadingCourseVideo}
-                onChange={handleCourseVideoUpload}
-                hidden
-              />
-            </label>
-          </div>
+          {user && (
+            <div className="checkout-video-meta">
+              <span className="playing-now-label">
+                <i className="fa-solid fa-film"></i> {previewTitle || course.title}
+              </span>
+              <label className="btn-mark-complete upload-lesson-btn">
+                <i className="fa-solid fa-cloud-arrow-up"></i>{' '}
+                {uploadingCourseVideo ? 'Uploading...' : 'Upload Video'}
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/ogg,video/*"
+                  disabled={uploadingCourseVideo}
+                  onChange={handleCourseVideoUpload}
+                  hidden
+                />
+              </label>
+            </div>
+          )}
 
           <div className="checkout-price-row">
             <span className="price-now">${course.price_usd}</span>
@@ -665,7 +657,7 @@ export default function CourseDetail() {
               <i className="fa-solid fa-file-invoice"></i> Certification of completion
             </li>
             <li>
-              <i className="fa-solid fa-chart-simple"></i> {moduleCount} Modules ({totalLessonsCount} Lessons)
+              <i className="fa-solid fa-chart-simple"></i> {moduleCount} Modules
             </li>
           </ul>
 

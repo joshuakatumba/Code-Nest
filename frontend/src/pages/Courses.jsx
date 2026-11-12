@@ -5,6 +5,10 @@ import { useAuth } from '../AuthContext.jsx';
 import CourseCard from '../components/CourseCard.jsx';
 import Footer from '../components/Footer.jsx';
 
+function stripBrackets(textValue) {
+  return (textValue || '').replace(/\s*\([^)]*\)/g, '');
+}
+
 export default function Courses() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +19,6 @@ export default function Courses() {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [statusMessage, setStatusMessage] = useState('');
   const [playingPromoVideo, setPlayingPromoVideo] = useState(false);
 
   useEffect(() => {
@@ -57,30 +60,6 @@ export default function Courses() {
       .catch(() => {});
   }, [user]);
 
-  const handleQuickUploadCourseVideo = async (courseId, file) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    setErrorMessage('');
-    setStatusMessage(`Uploading video "${file.name}"...`);
-    try {
-      const updated = await api.uploadCourseVideo(courseId, file);
-      setCourses((prev) =>
-        prev.map((course) => (course.id === updated.id ? updated : course))
-      );
-      setAllTracks((prev) =>
-        prev.map((track) => (track.id === updated.id ? updated : track))
-      );
-      setStatusMessage(
-        `Video uploaded for "${updated.title}". Click the course to manage lesson videos.`
-      );
-    } catch (error) {
-      setStatusMessage('');
-      setErrorMessage(error.message || 'Could not upload video');
-    }
-  };
-
   const enrolledSet = new Set(enrolledIds);
   const promoVideoSrc = resolveMediaUrl(
     allTracks[1]?.video_url || allTracks[0]?.video_url || '/uploads/videos/python-lesson.mp4'
@@ -92,7 +71,6 @@ export default function Courses() {
         <h1 className="explore-heading">Explore Courses</h1>
 
         {errorMessage && <div className="status-banner error">{errorMessage}</div>}
-        {statusMessage && <div className="status-banner info">{statusMessage}</div>}
 
         <div className="courses-sub-bar">
           <h3>Courses</h3>
@@ -101,18 +79,11 @@ export default function Courses() {
             className="see-all-link"
             onClick={() => setSelectedLevel(null)}
           >
-            See all ({allTracks.length})
+            See all
           </button>
         </div>
 
         <div className="level-pills">
-          <button
-            type="button"
-            className={`level-pill ${selectedLevel === null ? 'active' : ''}`}
-            onClick={() => setSelectedLevel(null)}
-          >
-            All Levels
-          </button>
           <button
             type="button"
             className={`level-pill ${selectedLevel === 1 ? 'active' : ''}`}
@@ -145,7 +116,6 @@ export default function Courses() {
                 key={course.id}
                 course={course}
                 isEnrolled={enrolledSet.has(course.id)}
-                onQuickUploadVideo={handleQuickUploadCourseVideo}
               />
             ))}
           </div>
@@ -167,23 +137,23 @@ export default function Courses() {
                   <i className="fa-solid fa-circle track-dot-icon"></i> Track {track.level}
                 </span>
                 <h4>{track.title}</h4>
-                <div className="track-tech">{track.tech}</div>
+                <div className="track-tech">{stripBrackets(track.tech)}</div>
 
                 <div className="track-meta-block">
                   <div className="track-meta-label">Target Grade / Age</div>
-                  <div className="track-meta-val">{track.grade_range}</div>
+                  <div className="track-meta-val">{stripBrackets(track.grade_range)}</div>
                 </div>
                 <div className="track-meta-block">
                   <div className="track-meta-label">What They Will Build</div>
-                  <div className="track-meta-val">{track.builds}</div>
+                  <div className="track-meta-val">{stripBrackets(track.builds)}</div>
                 </div>
                 <div className="track-meta-block">
                   <div className="track-meta-label">Key Skills Learned</div>
-                  <div className="track-meta-val">{track.skills}</div>
+                  <div className="track-meta-val">{stripBrackets(track.skills)}</div>
                 </div>
                 <div className="track-meta-block">
                   <div className="track-meta-label">Duration &amp; Package</div>
-                  <div className="track-meta-val">{track.duration}</div>
+                  <div className="track-meta-val">{stripBrackets(track.duration)}</div>
                 </div>
               </div>
             );

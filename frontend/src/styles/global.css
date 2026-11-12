@@ -2501,6 +2501,79 @@ button {
     transform: translateY(-4px);
 }
 
+.about-story-section {
+    max-width: 1080px;
+    margin: 64px auto 96px;
+    padding: 0 24px;
+    text-align: center;
+}
+
+.about-story-heading {
+    font-size: 24px;
+    font-weight: 600;
+    color: #252641;
+    margin-bottom: 12px;
+    letter-spacing: -0.2px;
+}
+
+.about-story-card {
+    background: #FFFFFF;
+    border: 1px solid #EAECEF;
+    border-radius: 18px;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 40px;
+    text-align: left;
+    align-items: start;
+    box-shadow: 0 8px 30px rgba(37, 38, 65, 0.04);
+}
+
+.about-story-narrative h3 {
+    font-size: 19px;
+    font-weight: 600;
+    color: #252641;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.about-story-narrative p {
+    font-size: 14px;
+    color: #696984;
+    line-height: 1.8;
+    margin-bottom: 14px;
+}
+
+.about-story-narrative p:last-child {
+    margin-bottom: 0;
+}
+
+.about-story-milestones {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.story-milestone-box {
+    background: #FAFBFD;
+    border-radius: 14px;
+    padding: 18px 22px;
+    border: 1px solid #EEF2F6;
+}
+
+.story-milestone-box h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #252641;
+    margin-bottom: 6px;
+}
+
+.story-milestone-box p {
+    font-size: 13px;
+    color: #696984;
+    line-height: 1.65;
+}
+
 /* ==========================================
    DYNAMIC VIDEO PLAYERS, COURSE CARDS & RUNNER
    ========================================== */
@@ -2815,6 +2888,7 @@ button {
     .home-platform-grid,
     .home-role-grid,
     .home-feature-row,
+    .about-story-card,
     .add-lesson-grid,
     .add-project-inline-form {
         grid-template-columns: 1fr;

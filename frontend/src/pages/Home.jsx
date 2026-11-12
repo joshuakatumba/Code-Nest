@@ -234,7 +234,13 @@ export default function Home() {
           <button
             type="button"
             className="home-role-photo-btn"
-            onClick={() => setShowInstructorPanel((prev) => !prev)}
+            onClick={() => {
+              if (!user) {
+                navigate('/login');
+                return;
+              }
+              setShowInstructorPanel((prev) => !prev);
+            }}
             aria-label="For Instructors: Start a class today"
           >
             <img
@@ -247,7 +253,13 @@ export default function Home() {
           <button
             type="button"
             className="home-role-photo-btn"
-            onClick={() => setShowAccessCodeForm((prev) => !prev)}
+            onClick={() => {
+              if (!user) {
+                navigate('/login');
+                return;
+              }
+              setShowAccessCodeForm((prev) => !prev);
+            }}
             aria-label="For Students: Enter access code"
           >
             <img
@@ -258,7 +270,7 @@ export default function Home() {
           </button>
         </div>
 
-        {showInstructorPanel && (
+        {user && showInstructorPanel && (
           <div className="home-interactive-drawer">
             <div className="drawer-header">
               <h4>Instructor Course &amp; Video Upload Studio</h4>

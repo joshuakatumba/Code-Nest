@@ -10,6 +10,7 @@ export default function Navbar() {
 
   const pathname = location.pathname;
   const isHome = pathname === '/';
+  const isAbout = pathname === '/about';
   const isCourses = pathname.startsWith('/courses');
   const isPricing = pathname === '/pricing';
   const isProgress = pathname === '/progress';
@@ -90,7 +91,9 @@ export default function Navbar() {
             </Link>
           </li>
           <li>
-            <a href="/#what-is-codenest">About Us</a>
+            <Link to="/about" className={isAbout ? 'active-link' : ''}>
+              About Us
+            </Link>
           </li>
           <li>
             <Link to="/progress" className={isProgress ? 'active-link' : ''}>

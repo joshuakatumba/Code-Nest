@@ -1,16 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function CourseCard({ course, isEnrolled = false, onQuickUploadVideo }) {
+export default function CourseCard({ course, isEnrolled = false }) {
   const isScratch = course.banner_key === 'scratch' || course.level === 1;
   const isTkinter = course.banner_key === 'tkinter' || course.level === 3;
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (file && onQuickUploadVideo) {
-      onQuickUploadVideo(course.id, file);
-    }
-  };
 
   return (
     <div className="course-card">
@@ -41,8 +34,7 @@ export default function CourseCard({ course, isEnrolled = false, onQuickUploadVi
             }`}
           >
             <div className="python-banner-title">
-              {isTkinter ? 'DESKTOP APPS WITH TKINTER' : 'LEARN TEXT-BASED PYTHON'}{' '}
-              <span className="python-banner-age">(Ages {course.age_range})</span>
+              {isTkinter ? 'DESKTOP APPS WITH TKINTER' : 'LEARN TEXT-BASED PYTHON'}
             </div>
             <div className="python-banner-split">
               <img
@@ -82,22 +74,6 @@ export default function CourseCard({ course, isEnrolled = false, onQuickUploadVi
         <Link to={`/courses/${course.id}`} className="btn-enroll">
           {isEnrolled ? 'Continue Course' : 'Enroll My Child'}
         </Link>
-        {isEnrolled && (
-          <Link to={`/progress?course=${course.id}`} className="btn-details">
-            Classroom
-          </Link>
-        )}
-        {onQuickUploadVideo && (
-          <label className="btn-details upload-card-label" title="Upload video for this course">
-            <i className="fa-solid fa-video"></i> Upload Video
-            <input
-              type="file"
-              accept="video/mp4,video/webm,video/ogg,video/*"
-              onChange={handleFileChange}
-              hidden
-            />
-          </label>
-        )}
       </div>
     </div>
   );
