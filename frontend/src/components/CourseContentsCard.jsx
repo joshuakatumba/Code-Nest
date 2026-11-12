@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ModuleAccordionItem from './ModuleAccordionItem.jsx';
 
 export default function CourseContentsCard({
   modules,
   completedCount,
   totalLessons,
+  activeLessonId,
+  onSelectLesson,
   onCompleteLesson,
   completingLessonId,
 }) {
-  const defaultOpenModuleId = modules.length > 1 ? modules[1].id : modules[0]?.id || null;
+  const defaultOpenModuleId = modules.length > 0 ? modules[0].id : null;
   const [openModuleId, setOpenModuleId] = useState(defaultOpenModuleId);
+
+  useEffect(() => {
+    if (modules.length > 0 && !modules.some((m) => m.id === openModuleId)) {
+      setOpenModuleId(modules[0].id);
+    }
+  }, [modules, openModuleId]);
 
   const segmentIndices = [0, 1, 2, 3, 4];
   const safeTotal = totalLessons > 0 ? totalLessons : 1;
@@ -46,6 +54,8 @@ export default function CourseContentsCard({
           module={module}
           isOpen={openModuleId === module.id}
           onToggle={handleToggleModule}
+          activeLessonId={activeLessonId}
+          onSelectLesson={onSelectLesson}
           onCompleteLesson={onCompleteLesson}
           completingLessonId={completingLessonId}
         />

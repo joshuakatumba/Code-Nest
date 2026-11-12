@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from database import get_db
 from models import (
@@ -11,9 +13,11 @@ from models import (
     Competency,
     Project,
     Quiz,
+    QuizAttempt,
 )
 from schemas import (
     ProgressResponse,
+    CourseResponse,
     CompetencyResponse,
     EnrollmentResponse,
     ProjectResponse,
@@ -23,13 +27,17 @@ from schemas import (
     LessonCompleteResponse,
 )
 from auth import get_current_user
+from routers.courses import (
+    save_uploaded_video_from_request,
+    ensure_course_projects_for_user,
+)
 
 router = APIRouter(prefix="/api", tags=["progress"])
 
 
 def build_course_progress_data(
     db: Session, user_id: int, target_course_id: int
-) -> tuple[list[ModuleResponse], int, int, int, int]:
+) -> tuple[list[ModuleResponse], list[int], int, int, int, int]:
     modules = (
         db.query(Module)
         .filter(Module.course_id == target_course_id)
@@ -37,13 +45,18 @@ def build_course_progress_data(
         .all()
     )
     module_ids = [module.id for module in modules]
-    lessons = (
+    module_order_map = {module.id: module.order for module in modules}
+
+    raw_lessons = (
         db.query(Lesson)
         .filter(Lesson.module_id.in_(module_ids))
-        .order_by(Lesson.order.asc())
         .all()
         if module_ids
         else []
+    )
+    lessons = sorted(
+        raw_lessons,
+        key=lambda item: (module_order_map.get(item.module_id, 0), item.order, item.id),
     )
     lesson_ids = [lesson.id for lesson in lessons]
     progress_rows = (
@@ -65,8 +78,15 @@ def build_course_progress_data(
     module_total_counts: dict[int, int] = {module.id: 0 for module in modules}
     module_done_counts: dict[int, int] = {module.id: 0 for module in modules}
 
-    for lesson in lessons:
+    for i, lesson in enumerate(lessons):
         is_completed = lesson.id in completed_lesson_ids
+        previous_completed = i == 0 or (lessons[i - 1].id in completed_lesson_ids)
+        effective_locked = (
+            bool(lesson.is_locked_default)
+            and not is_completed
+            and not previous_completed
+        )
+
         module_total_counts[lesson.module_id] = (
             module_total_counts.get(lesson.module_id, 0) + 1
         )
@@ -82,7 +102,7 @@ def build_course_progress_data(
                 duration_label=lesson.duration_label,
                 order=lesson.order,
                 video_url=lesson.video_url,
-                is_locked_default=lesson.is_locked_default,
+                is_locked_default=effective_locked,
                 completed=is_completed,
             )
         )
@@ -110,6 +130,7 @@ def build_course_progress_data(
     total_modules = len(modules)
     return (
         module_responses,
+        lesson_ids,
         completed_count,
         total_lessons,
         completed_modules,
@@ -119,6 +140,7 @@ def build_course_progress_data(
 
 @router.get("/progress", response_model=ProgressResponse)
 def get_progress(
+    course_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProgressResponse:
@@ -134,30 +156,91 @@ def get_progress(
         .order_by(Enrollment.created_at.desc())
         .all()
     )
-    projects = (
-        db.query(Project)
-        .filter(Project.user_id == current_user.id)
-        .order_by(Project.id.asc())
+
+    enrolled_course_ids = [enrollment.course_id for enrollment in enrollments]
+    enrolled_courses_rows = (
+        db.query(Course)
+        .filter(Course.id.in_(enrolled_course_ids))
+        .order_by(Course.level.asc())
         .all()
+        if enrolled_course_ids
+        else []
     )
 
-    if enrollments:
+    if course_id is not None:
+        active_course_id = course_id
+    elif enrollments:
         active_course_id = enrollments[0].course_id
     else:
         python_course = db.query(Course).filter(Course.level == 2).first()
         active_course_id = python_course.id if python_course else 1
 
+    active_course = db.query(Course).filter(Course.id == active_course_id).first()
+    if active_course is not None:
+        ensure_course_projects_for_user(db, current_user.id, active_course)
+        db.commit()
+
+    course_projects = (
+        db.query(Project)
+        .filter(
+            Project.user_id == current_user.id,
+            Project.course_id == active_course_id,
+        )
+        .order_by(Project.id.asc())
+        .all()
+    )
+    if not course_projects:
+        course_projects = (
+            db.query(Project)
+            .filter(Project.user_id == current_user.id)
+            .order_by(Project.id.asc())
+            .all()
+        )
+
     (
         module_responses,
+        course_lesson_ids,
         completed_count,
         total_lessons,
         completed_modules,
         total_modules,
     ) = build_course_progress_data(db, current_user.id, active_course_id)
 
-    quizzes = db.query(Quiz).order_by(Quiz.id.asc()).all()
+    quizzes = (
+        db.query(Quiz)
+        .filter(Quiz.lesson_id.in_(course_lesson_ids))
+        .order_by(Quiz.id.asc())
+        .all()
+        if course_lesson_ids
+        else []
+    )
+    if not quizzes:
+        quizzes = db.query(Quiz).order_by(Quiz.id.asc()).all()
+
+    attempt_rows = (
+        db.query(QuizAttempt.quiz_id, func.max(QuizAttempt.score))
+        .filter(QuizAttempt.user_id == current_user.id)
+        .group_by(QuizAttempt.quiz_id)
+        .all()
+    )
+    best_scores_by_quiz = {int(q_id): int(max_score) for q_id, max_score in attempt_rows}
+
+    quiz_items = [
+        QuizListItemResponse(
+            id=quiz.id,
+            lesson_id=quiz.lesson_id,
+            title=quiz.title,
+            best_score=best_scores_by_quiz.get(quiz.id),
+        )
+        for quiz in quizzes
+    ]
 
     return ProgressResponse(
+        active_course_id=active_course_id,
+        enrolled_courses=[
+            CourseResponse.model_validate(course_row)
+            for course_row in enrolled_courses_rows
+        ],
         competencies=[
             CompetencyResponse.model_validate(competency)
             for competency in competencies
@@ -170,10 +253,32 @@ def get_progress(
         total=total_lessons,
         completed_modules=completed_modules,
         total_modules=total_modules,
-        projects=[ProjectResponse.model_validate(project) for project in projects],
+        projects=[ProjectResponse.model_validate(project) for project in course_projects],
         modules=module_responses,
-        quizzes=[QuizListItemResponse.model_validate(quiz) for quiz in quizzes],
+        quizzes=quiz_items,
     )
+
+
+@router.post("/lessons/{lesson_id}/video", response_model=LessonResponse)
+async def upload_lesson_video(
+    lesson_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> LessonResponse:
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    if lesson is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found",
+        )
+    saved_video_url = await save_uploaded_video_from_request(
+        request, f"lesson_{lesson_id}"
+    )
+    lesson.video_url = saved_video_url
+    db.commit()
+    db.refresh(lesson)
+    return LessonResponse.model_validate(lesson)
 
 
 @router.post("/lessons/{lesson_id}/complete", response_model=LessonCompleteResponse)
@@ -226,6 +331,7 @@ def complete_lesson(
     db.commit()
 
     (
+        _,
         _,
         completed_count,
         total_lessons,

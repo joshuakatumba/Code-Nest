@@ -4,6 +4,8 @@ export default function ModuleAccordionItem({
   module,
   isOpen,
   onToggle,
+  activeLessonId,
+  onSelectLesson,
   onCompleteLesson,
   completingLessonId,
 }) {
@@ -33,32 +35,47 @@ export default function ModuleAccordionItem({
         <div className="lesson-sublist">
           {module.lessons.map((lesson) => {
             const isCompleted = Boolean(lesson.completed);
+            const isSelected = activeLessonId === lesson.id;
             const isBusy = completingLessonId === lesson.id;
+            const isLocked = Boolean(lesson.is_locked_default) && !isCompleted;
 
             return (
               <div
                 key={lesson.id}
-                className={`lesson-row ${isCompleted ? 'active-lesson' : ''}`}
+                className={`lesson-row ${
+                  isCompleted || isSelected ? 'active-lesson' : ''
+                }`}
               >
-                <span>{lesson.title}</span>
-                <span>
+                <button
+                  type="button"
+                  className="lesson-select-btn"
+                  onClick={() => onSelectLesson && onSelectLesson(lesson)}
+                >
+                  <i
+                    className={`fa-solid ${
+                      isSelected ? 'fa-circle-play' : 'fa-play'
+                    } acc-chevron-icon`}
+                  ></i>{' '}
+                  {lesson.title}
+                </button>
+                <span className="lesson-right-meta">
                   {lesson.duration_label}{' '}
                   {isCompleted ? (
-                    <i className="fa-solid fa-check acc-chevron-icon"></i>
+                    <i className="fa-solid fa-check acc-chevron-icon" title="Completed"></i>
+                  ) : isLocked ? (
+                    <i
+                      className="fa-solid fa-lock acc-chevron-icon"
+                      title="Complete the previous lesson to unlock"
+                    ></i>
                   ) : (
-                    <>
-                      {lesson.is_locked_default && (
-                        <i className="fa-solid fa-lock acc-chevron-icon"></i>
-                      )}
-                      <button
-                        type="button"
-                        className="btn-mark-complete"
-                        onClick={() => onCompleteLesson(lesson.id)}
-                        disabled={isBusy}
-                      >
-                        {isBusy ? 'Saving...' : 'Complete'}
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      className="btn-mark-complete"
+                      onClick={() => onCompleteLesson(lesson.id)}
+                      disabled={isBusy}
+                    >
+                      {isBusy ? 'Saving...' : 'Complete'}
+                    </button>
                   )}
                 </span>
               </div>

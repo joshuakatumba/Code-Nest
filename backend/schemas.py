@@ -90,6 +90,43 @@ class CourseResponse(BaseModel):
     old_price_usd: float
     banner_key: str
     rating_avg: float
+    video_url: Optional[str] = None
+
+
+class CourseCreateRequest(BaseModel):
+    title: str
+    level: int = 1
+    tech: str = "Python 3"
+    description: str
+    age_range: str = "12-16"
+    grade_range: str = "Senior 1-3 (12-16)"
+    builds: str = "Custom Student Projects"
+    skills: str = "Problem solving, coding logic"
+    duration: str = "1 Term (12 sessions) • $40"
+    price_usd: float = 40.0
+    old_price_usd: float = 80.0
+    banner_key: str = "python"
+    video_url: Optional[str] = None
+
+
+class ModuleCreateRequest(BaseModel):
+    title: str
+    duration_label: str = "1 Hour"
+
+
+class LessonCreateRequest(BaseModel):
+    module_id: int
+    title: str
+    duration_label: str = "20:00"
+    video_url: Optional[str] = None
+
+
+class ReviewCreateRequest(BaseModel):
+    stars: int
+
+
+class AccessCodeEnrollRequest(BaseModel):
+    access_code: str
 
 
 class CourseDetailResponse(CourseResponse):
@@ -127,15 +164,25 @@ class ProjectResponse(BaseModel):
     preview_key: str
 
 
+class ProjectCreateRequest(BaseModel):
+    course_id: Optional[int] = None
+    title: str
+    description: str
+    preview_key: str = "momo"
+
+
 class QuizListItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     lesson_id: int
     title: str
+    best_score: Optional[int] = None
 
 
 class ProgressResponse(BaseModel):
+    active_course_id: Optional[int] = None
+    enrolled_courses: list[CourseResponse] = []
     competencies: list[CompetencyResponse]
     enrollments: list[EnrollmentResponse]
     completed: int

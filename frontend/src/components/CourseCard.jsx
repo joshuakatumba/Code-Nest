@@ -1,8 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, isEnrolled = false, onQuickUploadVideo }) {
   const isScratch = course.banner_key === 'scratch' || course.level === 1;
+  const isTkinter = course.banner_key === 'tkinter' || course.level === 3;
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file && onQuickUploadVideo) {
+      onQuickUploadVideo(course.id, file);
+    }
+  };
 
   return (
     <div className="course-card">
@@ -11,7 +19,7 @@ export default function CourseCard({ course }) {
           <div className="course-banner-box course-banner-scratch">
             <div className="scratch-banner-title">Creative Coding With Scratch!</div>
             <div className="scratch-banner-sub">
-              BUILD YOUR OWN GAMES! | FUN FOR KIDS AGES 7+
+              BUILD YOUR OWN GAMES! | FUN FOR KIDS AGES {course.age_range}
             </div>
             <div className="scratch-banner-split">
               <div className="scratch-blocks-card">
@@ -29,11 +37,11 @@ export default function CourseCard({ course }) {
         ) : (
           <div
             className={`course-banner-box ${
-              course.level === 3 ? 'course-banner-tkinter' : 'course-banner-python'
+              isTkinter ? 'course-banner-tkinter' : 'course-banner-python'
             }`}
           >
             <div className="python-banner-title">
-              {course.level === 3 ? 'LOCAL PROBLEM SOLVING' : 'LEARN TEXT-BASED PYTHON'}{' '}
+              {isTkinter ? 'DESKTOP APPS WITH TKINTER' : 'LEARN TEXT-BASED PYTHON'}{' '}
               <span className="python-banner-age">(Ages {course.age_range})</span>
             </div>
             <div className="python-banner-split">
@@ -42,13 +50,23 @@ export default function CourseCard({ course }) {
                 alt="Student coding"
                 className="python-student-img"
               />
-              <div className="python-code-box">
-                <div className="code-line-blue">import turtle</div>
-                <div>t = turtle.Turtle()</div>
-                <div className="code-line-yellow">for i in range(5):</div>
-                <div className="code-line-indent">t.forward(100)</div>
-                <div className="code-line-indent">t.right(144)</div>
-              </div>
+              {isTkinter ? (
+                <div className="python-code-box">
+                  <div className="code-line-blue">import tkinter as tk</div>
+                  <div>app = tk.Tk()</div>
+                  <div className="code-line-yellow">def save_canteen_csv():</div>
+                  <div className="code-line-indent">writer.writerow(sale)</div>
+                  <div className="code-line-indent">app.mainloop()</div>
+                </div>
+              ) : (
+                <div className="python-code-box">
+                  <div className="code-line-blue">import turtle</div>
+                  <div>t = turtle.Turtle()</div>
+                  <div className="code-line-yellow">for i in range(5):</div>
+                  <div className="code-line-indent">t.forward(100)</div>
+                  <div className="code-line-indent">t.right(144)</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -59,9 +77,28 @@ export default function CourseCard({ course }) {
         </div>
         <p className="course-desc">{course.description}</p>
       </div>
-      <Link to={`/courses/${course.id}`} className="btn-enroll">
-        Enroll My Child
-      </Link>
+
+      <div className="course-card-actions">
+        <Link to={`/courses/${course.id}`} className="btn-enroll">
+          {isEnrolled ? 'Continue Course' : 'Enroll My Child'}
+        </Link>
+        {isEnrolled && (
+          <Link to={`/progress?course=${course.id}`} className="btn-details">
+            Classroom
+          </Link>
+        )}
+        {onQuickUploadVideo && (
+          <label className="btn-details upload-card-label" title="Upload video for this course">
+            <i className="fa-solid fa-video"></i> Upload Video
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/ogg,video/*"
+              onChange={handleFileChange}
+              hidden
+            />
+          </label>
+        )}
+      </div>
     </div>
   );
 }

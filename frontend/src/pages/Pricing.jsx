@@ -36,7 +36,7 @@ export default function Pricing() {
       if (plan.name === 'Free') {
         navigate('/courses');
       } else {
-        navigate('/courses/2');
+        navigate('/signup');
       }
       return;
     }

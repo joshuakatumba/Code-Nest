@@ -14,8 +14,18 @@ export default function PracticeQuizSection({
   onSelectOption,
   onSubmitQuiz,
 }) {
-  const hasQuestions =
-    activeQuiz && activeQuiz.questions && activeQuiz.questions.length > 0;
+  const questions = activeQuiz?.questions || [];
+  const hasQuestions = questions.length > 0;
+  const answeredCount = (selectedAnswers || []).filter((val) => val >= 0).length;
+  const totalQuestions = hasQuestions ? questions.length : 1;
+  const progressPercent = Math.round((answeredCount / totalQuestions) * 100);
+
+  const resultsByQuestionId = {};
+  if (quizResult && quizResult.results) {
+    for (const item of quizResult.results) {
+      resultsByQuestionId[item.question_id] = item;
+    }
+  }
 
   return (
     <section className="practice-quiz-section">
@@ -33,7 +43,12 @@ export default function PracticeQuizSection({
               }`}
               onClick={() => onSelectQuiz(quiz.id)}
             >
-              <i className="fa-solid fa-book"></i> {quiz.title}
+              <span>
+                <i className="fa-solid fa-book"></i> {quiz.title}
+              </span>
+              {quiz.best_score !== null && quiz.best_score !== undefined && (
+                <span className="quiz-best-badge">Best: {quiz.best_score}</span>
+              )}
             </button>
           );
         })}
@@ -48,12 +63,13 @@ export default function PracticeQuizSection({
                 <p>Loading quiz questions...</p>
               ) : hasQuestions ? (
                 <>
-                  {activeQuiz.questions.map((question, i) => (
+                  {questions.map((question, i) => (
                     <QuizQuestionBlock
                       key={question.id}
                       question={question}
                       questionIndex={i}
                       selectedOptionIndex={selectedAnswers[i]}
+                      questionResult={resultsByQuestionId[question.id] || null}
                       onSelectOption={onSelectOption}
                     />
                   ))}
@@ -62,7 +78,7 @@ export default function PracticeQuizSection({
                       type="button"
                       className="btn-quiz-submit"
                       onClick={onSubmitQuiz}
-                      disabled={submittingQuiz}
+                      disabled={submittingQuiz || answeredCount === 0}
                     >
                       {submittingQuiz ? 'Grading...' : 'Submit Answer'}
                     </button>
@@ -81,13 +97,20 @@ export default function PracticeQuizSection({
 
           <div className="video-player-bar">
             <div className="player-progress">
-              <div className="player-progress-fill"></div>
+              <div
+                className="player-progress-fill"
+                style={{ width: `${progressPercent}%` }}
+              ></div>
             </div>
             <div className="player-meta">
               <span>
-                <i className="fa-solid fa-play"></i> 0:35 / 05:28
+                <i className="fa-solid fa-list-check"></i> {answeredCount} / {questions.length} Answered
               </span>
-              <i className="fa-solid fa-expand"></i>
+              <span>
+                {quizResult
+                  ? `Last Score: ${quizResult.score}/${quizResult.total}`
+                  : `${progressPercent}% Ready`}
+              </span>
             </div>
           </div>
         </div>

@@ -1,21 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, resolveMediaUrl } from '../api.js';
+import { useAuth } from '../AuthContext.jsx';
 import CourseCard from '../components/CourseCard.jsx';
 import Footer from '../components/Footer.jsx';
 
 export default function Courses() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [courses, setCourses] = useState([]);
+  const [allTracks, setAllTracks] = useState([]);
+  const [enrolledIds, setEnrolledIds] = useState([]);
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const navigate = useNavigate();
+  const [statusMessage, setStatusMessage] = useState('');
+  const [playingPromoVideo, setPlayingPromoVideo] = useState(false);
+
+  useEffect(() => {
+    api
+      .getCourses()
+      .then((data) => {
+        setAllTracks(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
     setErrorMessage('');
     api
-      .getCourses()
+      .getCourses(selectedLevel)
       .then((data) => {
         setCourses(data);
       })
@@ -25,11 +41,50 @@ export default function Courses() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [selectedLevel]);
 
-  const displayedCourses = selectedLevel
-    ? courses.filter((course) => course.level === selectedLevel)
-    : courses.slice(0, 2);
+  useEffect(() => {
+    if (!user) {
+      setEnrolledIds([]);
+      return;
+    }
+    api
+      .getProgress()
+      .then((progressData) => {
+        const ids = (progressData.enrollments || []).map((item) => item.course_id);
+        setEnrolledIds(ids);
+      })
+      .catch(() => {});
+  }, [user]);
+
+  const handleQuickUploadCourseVideo = async (courseId, file) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setErrorMessage('');
+    setStatusMessage(`Uploading video "${file.name}"...`);
+    try {
+      const updated = await api.uploadCourseVideo(courseId, file);
+      setCourses((prev) =>
+        prev.map((course) => (course.id === updated.id ? updated : course))
+      );
+      setAllTracks((prev) =>
+        prev.map((track) => (track.id === updated.id ? updated : track))
+      );
+      setStatusMessage(
+        `Video uploaded for "${updated.title}". Click the course to manage lesson videos.`
+      );
+    } catch (error) {
+      setStatusMessage('');
+      setErrorMessage(error.message || 'Could not upload video');
+    }
+  };
+
+  const enrolledSet = new Set(enrolledIds);
+  const promoVideoSrc = resolveMediaUrl(
+    allTracks[1]?.video_url || allTracks[0]?.video_url || '/uploads/videos/python-lesson.mp4'
+  );
 
   return (
     <main id="screen-courses">
@@ -37,6 +92,7 @@ export default function Courses() {
         <h1 className="explore-heading">Explore Courses</h1>
 
         {errorMessage && <div className="status-banner error">{errorMessage}</div>}
+        {statusMessage && <div className="status-banner info">{statusMessage}</div>}
 
         <div className="courses-sub-bar">
           <h3>Courses</h3>
@@ -45,14 +101,21 @@ export default function Courses() {
             className="see-all-link"
             onClick={() => setSelectedLevel(null)}
           >
-            See all
+            See all ({allTracks.length})
           </button>
         </div>
 
         <div className="level-pills">
           <button
             type="button"
-            className={`level-pill ${selectedLevel === 1 || selectedLevel === null ? 'active' : ''}`}
+            className={`level-pill ${selectedLevel === null ? 'active' : ''}`}
+            onClick={() => setSelectedLevel(null)}
+          >
+            All Levels
+          </button>
+          <button
+            type="button"
+            className={`level-pill ${selectedLevel === 1 ? 'active' : ''}`}
             onClick={() => setSelectedLevel(selectedLevel === 1 ? null : 1)}
           >
             Level 1
@@ -77,8 +140,13 @@ export default function Courses() {
           <div className="loading-state">Loading courses...</div>
         ) : (
           <div className="featured-courses-grid">
-            {displayedCourses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+            {courses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                isEnrolled={enrolledSet.has(course.id)}
+                onQuickUploadVideo={handleQuickUploadCourseVideo}
+              />
             ))}
           </div>
         )}
@@ -87,7 +155,7 @@ export default function Courses() {
         <h2 className="tracks-subheading">Tracks</h2>
 
         <div className="tracks-grid">
-          {courses.map((track) => {
+          {allTracks.map((track) => {
             const badgeClass = `t${track.level}`;
             return (
               <div
@@ -145,10 +213,28 @@ export default function Courses() {
             <div className="frame-corner-tl"></div>
             <div className="frame-corner-br"></div>
             <div className="classroom-img-wrapper">
-              <img src="/images/classroom.svg" alt="Classroom" />
-              <Link to="/progress" className="play-btn-circle" aria-label="Go to classroom">
-                <i className="fa-solid fa-play"></i>
-              </Link>
+              {playingPromoVideo ? (
+                <video
+                  src={promoVideoSrc}
+                  controls
+                  autoPlay
+                  className="classroom-promo-video"
+                >
+                  Your browser does not support HTML5 video.
+                </video>
+              ) : (
+                <>
+                  <img src="/images/classroom.svg" alt="Classroom" />
+                  <button
+                    type="button"
+                    className="play-btn-circle"
+                    aria-label="Play classroom preview video"
+                    onClick={() => setPlayingPromoVideo(true)}
+                  >
+                    <i className="fa-solid fa-play"></i>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

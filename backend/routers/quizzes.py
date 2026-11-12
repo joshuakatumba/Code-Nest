@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Quiz, Question, QuizAttempt, User
+from models import Quiz, Question, QuizAttempt, Competency, User
 from schemas import (
     QuizDetailResponse,
     QuestionPublicResponse,
@@ -92,6 +92,17 @@ def submit_quiz(
         score=score,
     )
     db.add(attempt)
+
+    if score > 0:
+        competencies = (
+            db.query(Competency)
+            .filter(Competency.user_id == current_user.id)
+            .all()
+        )
+        for competency in competencies:
+            if "Problem" in competency.name or "Syntax" in competency.name:
+                competency.percent = min(100, competency.percent + 2)
+
     db.commit()
 
     return QuizSubmitResponse(

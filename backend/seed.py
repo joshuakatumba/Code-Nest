@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from database import engine, SessionLocal, Base
+from database import engine, SessionLocal, Base, ensure_schema_columns
 from models import (
     Plan,
     User,
@@ -90,6 +90,7 @@ def get_or_create_lesson(
     duration_label: str,
     order: int,
     is_locked_default: bool,
+    video_url: str = "/uploads/videos/python-lesson.mp4",
 ) -> Lesson:
     lesson = (
         db.query(Lesson)
@@ -102,7 +103,7 @@ def get_or_create_lesson(
             title=title,
             duration_label=duration_label,
             order=order,
-            video_url="/images/instructor.svg",
+            video_url=video_url,
             is_locked_default=is_locked_default,
         )
         db.add(lesson)
@@ -111,6 +112,8 @@ def get_or_create_lesson(
         lesson.title = title
         lesson.duration_label = duration_label
         lesson.is_locked_default = is_locked_default
+        if not lesson.video_url or lesson.video_url.endswith(".svg"):
+            lesson.video_url = video_url
     return lesson
 
 
@@ -305,11 +308,12 @@ def seed_reviews_for_course(
     reviewed_course_ids: set[int],
     course_id: int,
     user_id: int,
+    star_distribution: list[int] | None = None,
 ) -> None:
     if course_id in reviewed_course_ids:
         return
-    star_distribution = [5, 5, 5, 5, 5, 4, 4, 4, 3, 2]
-    for star_value in star_distribution:
+    stars_list = star_distribution or [5, 5, 5, 5, 5, 4, 4, 4, 3, 2]
+    for star_value in stars_list:
         db.add(
             Review(
                 course_id=course_id,
@@ -321,6 +325,7 @@ def seed_reviews_for_course(
 
 def seed_database() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_schema_columns()
     db = SessionLocal()
     try:
         get_or_create_plan(
@@ -384,6 +389,7 @@ def seed_database() -> None:
                 "old_price_usd": 80.0,
                 "banner_key": "scratch",
                 "rating_avg": 4.5,
+                "video_url": "/uploads/videos/scratch-lesson.mp4",
             },
         )
 
@@ -403,6 +409,7 @@ def seed_database() -> None:
                 "old_price_usd": 99.99,
                 "banner_key": "python",
                 "rating_avg": 4.2,
+                "video_url": "/uploads/videos/python-lesson.mp4",
             },
         )
 
@@ -422,6 +429,7 @@ def seed_database() -> None:
                 "old_price_usd": 100.0,
                 "banner_key": "tkinter",
                 "rating_avg": 4.6,
+                "video_url": "/uploads/videos/tkinter-lesson.mp4",
             },
         )
 
@@ -431,35 +439,35 @@ def seed_database() -> None:
         module_four = get_or_create_module(db, course_two.id, "Conditions & Loops", "45 Mins", 4)
         module_five = get_or_create_module(db, course_two.id, "Mini Project: Fee Estimator", "59 Mins", 5)
 
-        lesson_one = get_or_create_lesson(db, module_one.id, "1. Installing Thonny & Setup", "20:00", 1, False)
-        lesson_two = get_or_create_lesson(db, module_one.id, "2. Running Your First Script", "40:00", 2, False)
+        lesson_one = get_or_create_lesson(db, module_one.id, "1. Installing Thonny & Setup", "20:00", 1, False, "/uploads/videos/python-lesson.mp4")
+        lesson_two = get_or_create_lesson(db, module_one.id, "2. Running Your First Script", "40:00", 2, False, "/uploads/videos/python-lesson.mp4")
 
-        lesson_three = get_or_create_lesson(db, module_two.id, "1. Hello World & print()", "65:00", 1, False)
-        lesson_four = get_or_create_lesson(db, module_two.id, "2. Variables & Input", "25:00", 2, True)
-        get_or_create_lesson(db, module_two.id, "3. Data Types", "30:00", 3, True)
+        lesson_three = get_or_create_lesson(db, module_two.id, "1. Hello World & print()", "65:00", 1, False, "/uploads/videos/python-lesson.mp4")
+        lesson_four = get_or_create_lesson(db, module_two.id, "2. Variables & Input", "25:00", 2, True, "/uploads/videos/python-lesson.mp4")
+        get_or_create_lesson(db, module_two.id, "3. Data Types", "30:00", 3, True, "/uploads/videos/python-lesson.mp4")
 
-        lesson_six = get_or_create_lesson(db, module_three.id, "1. Defining Functions", "30:00", 1, True)
-        get_or_create_lesson(db, module_three.id, "2. Return Values", "30:00", 2, True)
+        lesson_six = get_or_create_lesson(db, module_three.id, "1. Defining Functions", "30:00", 1, True, "/uploads/videos/python-lesson.mp4")
+        get_or_create_lesson(db, module_three.id, "2. Return Values", "30:00", 2, True, "/uploads/videos/python-lesson.mp4")
 
-        lesson_eight = get_or_create_lesson(db, module_four.id, "1. If / Else Statements", "25:00", 1, True)
-        lesson_nine = get_or_create_lesson(db, module_four.id, "2. For & While Loops", "20:00", 2, True)
+        lesson_eight = get_or_create_lesson(db, module_four.id, "1. If / Else Statements", "25:00", 1, True, "/uploads/videos/python-lesson.mp4")
+        lesson_nine = get_or_create_lesson(db, module_four.id, "2. For & While Loops", "20:00", 2, True, "/uploads/videos/python-lesson.mp4")
 
-        lesson_ten = get_or_create_lesson(db, module_five.id, "1. Mobile Money Fee Logic", "30:00", 1, True)
-        lesson_eleven = get_or_create_lesson(db, module_five.id, "2. Final Evaluation", "29:00", 2, True)
+        lesson_ten = get_or_create_lesson(db, module_five.id, "1. Mobile Money Fee Logic", "30:00", 1, True, "/uploads/videos/python-lesson.mp4")
+        lesson_eleven = get_or_create_lesson(db, module_five.id, "2. Final Evaluation", "29:00", 2, True, "/uploads/videos/python-lesson.mp4")
 
         scratch_module_one = get_or_create_module(db, course_one.id, "Get Started with Scratch", "1 Hour", 1)
         scratch_module_two = get_or_create_module(db, course_one.id, "Sprites, Motion & Loops", "2 Hours", 2)
         scratch_module_three = get_or_create_module(db, course_one.id, "Project: Boda-Boda Maze", "1 Hour", 3)
-        get_or_create_lesson(db, scratch_module_one.id, "1. Scratch Stage & Sprites", "30:00", 1, False)
-        get_or_create_lesson(db, scratch_module_two.id, "1. Forever Loops & Events", "45:00", 1, True)
-        get_or_create_lesson(db, scratch_module_three.id, "1. Building the Maze Game", "60:00", 1, True)
+        scratch_l1 = get_or_create_lesson(db, scratch_module_one.id, "1. Scratch Stage & Sprites", "30:00", 1, False, "/uploads/videos/scratch-lesson.mp4")
+        scratch_l2 = get_or_create_lesson(db, scratch_module_two.id, "1. Forever Loops & Events", "45:00", 1, True, "/uploads/videos/scratch-lesson.mp4")
+        get_or_create_lesson(db, scratch_module_three.id, "1. Building the Maze Game", "60:00", 1, True, "/uploads/videos/scratch-lesson.mp4")
 
         tkinter_module_one = get_or_create_module(db, course_three.id, "Desktop Windows with Tkinter", "2 Hours", 1)
         tkinter_module_two = get_or_create_module(db, course_three.id, "Reading & Writing CSV Files", "2 Hours", 2)
         tkinter_module_three = get_or_create_module(db, course_three.id, "Project: School Canteen Tracker", "2 Hours", 3)
-        get_or_create_lesson(db, tkinter_module_one.id, "1. Buttons, Labels & Entry", "45:00", 1, False)
-        get_or_create_lesson(db, tkinter_module_two.id, "1. Storing Sales in CSV", "50:00", 1, True)
-        get_or_create_lesson(db, tkinter_module_three.id, "1. Full Canteen App Showcase", "60:00", 1, True)
+        tkinter_l1 = get_or_create_lesson(db, tkinter_module_one.id, "1. Buttons, Labels & Entry", "45:00", 1, False, "/uploads/videos/tkinter-lesson.mp4")
+        tkinter_l2 = get_or_create_lesson(db, tkinter_module_two.id, "1. Storing Sales in CSV", "50:00", 1, True, "/uploads/videos/tkinter-lesson.mp4")
+        get_or_create_lesson(db, tkinter_module_three.id, "1. Full Canteen App Showcase", "60:00", 1, True, "/uploads/videos/tkinter-lesson.mp4")
 
         enrollment = (
             db.query(Enrollment)
@@ -494,11 +502,80 @@ def seed_database() -> None:
             lesson_eleven.id,
         )
 
+        all_quizzes_after = {quiz.title: quiz for quiz in db.query(Quiz).all()}
+        scratch_q1 = get_or_create_quiz(
+            db, all_quizzes_after, scratch_l1.id, "Scratch 01 : Stage & Sprites"
+        )
+        scratch_q2 = get_or_create_quiz(
+            db, all_quizzes_after, scratch_l2.id, "Scratch 02 : Forever Loops"
+        )
+        tkinter_q1 = get_or_create_quiz(
+            db, all_quizzes_after, tkinter_l1.id, "Tkinter 01 : Widgets & Windows"
+        )
+        tkinter_q2 = get_or_create_quiz(
+            db, all_quizzes_after, tkinter_l2.id, "Tkinter 02 : CSV File Storage"
+        )
+        existing_prompts_after = {q.prompt for q in db.query(Question).all()}
+        extra_questions = [
+            (
+                scratch_q1.id,
+                "Which Scratch block starts a script when the green flag is clicked?",
+                ["A. forever", "B. when green flag clicked", "C. move 10 steps", "D. wait 1 second"],
+                1,
+            ),
+            (
+                scratch_q2.id,
+                "Which block repeats actions continuously during a game?",
+                ["A. if then", "B. stop all", "C. forever", "D. say Hello"],
+                2,
+            ),
+            (
+                tkinter_q1.id,
+                "Which Tkinter widget creates a clickable button in a desktop window?",
+                ["A. tk.Label", "B. tk.Entry", "C. tk.Button", "D. tk.Frame"],
+                2,
+            ),
+            (
+                tkinter_q2.id,
+                "Which standard Python module reads and writes comma-separated files?",
+                ["A. math", "B. csv", "C. turtle", "D. random"],
+                1,
+            ),
+        ]
+        for quiz_id, prompt_text, options_list, correct_idx in extra_questions:
+            if prompt_text not in existing_prompts_after:
+                db.add(
+                    Question(
+                        quiz_id=quiz_id,
+                        prompt=prompt_text,
+                        options=options_list,
+                        correct_index=correct_idx,
+                    )
+                )
+
         existing_reviews = db.query(Review).all()
         reviewed_course_ids = {review.course_id for review in existing_reviews}
-        seed_reviews_for_course(db, reviewed_course_ids, course_one.id, demo_user.id)
-        seed_reviews_for_course(db, reviewed_course_ids, course_two.id, demo_user.id)
-        seed_reviews_for_course(db, reviewed_course_ids, course_three.id, demo_user.id)
+        seed_reviews_for_course(
+            db,
+            reviewed_course_ids,
+            course_one.id,
+            demo_user.id,
+            [5, 5, 5, 5, 5, 5, 4, 4, 4, 3],
+        )
+        seed_reviews_for_course(
+            db,
+            reviewed_course_ids,
+            course_two.id,
+            demo_user.id,
+            [5, 5, 5, 5, 5, 4, 4, 4, 3, 2],
+        )
+        seed_reviews_for_course(
+            db,
+            reviewed_course_ids,
+            course_three.id,
+            demo_user.id,
+            [5, 5, 5, 5, 5, 5, 5, 4, 4, 4],
+        )
 
         db.commit()
     finally:

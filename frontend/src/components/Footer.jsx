@@ -6,6 +6,7 @@ export default function Footer() {
   const [email, setEmail] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [activePolicy, setActivePolicy] = useState(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -59,10 +60,35 @@ export default function Footer() {
       <div className="footer-links">
         <Link to="/courses">Courses</Link>
         <span className="divider">|</span>
-        <a href="#privacy">Privacy Policy</a>
+        <button
+          type="button"
+          className="footer-link-btn"
+          onClick={() => setActivePolicy(activePolicy === 'privacy' ? null : 'privacy')}
+        >
+          Privacy Policy
+        </button>
         <span className="divider">|</span>
-        <a href="#terms">Terms &amp; Conditions</a>
+        <button
+          type="button"
+          className="footer-link-btn"
+          onClick={() => setActivePolicy(activePolicy === 'terms' ? null : 'terms')}
+        >
+          Terms &amp; Conditions
+        </button>
       </div>
+      {activePolicy === 'privacy' && (
+        <div className="footer-policy-box">
+          CodeNest Kampala protects student data in accordance with Uganda Data Protection and
+          Privacy regulations. Student progress and projects are shared only with authorized
+          educators and parents.
+        </div>
+      )}
+      {activePolicy === 'terms' && (
+        <div className="footer-policy-box">
+          CodeNest courses include 12 term sessions, CBC competency tracking, and project
+          assessments. Subscriptions may be updated or cancelled at any time from the Pricing page.
+        </div>
+      )}
       <div className="footer-copy">© 2026 CodeNest Kampala.</div>
     </footer>
   );

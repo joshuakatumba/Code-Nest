@@ -39,6 +39,7 @@ export default function PlanCard({ plan, user, onSelectPlan }) {
       <button
         type="button"
         className={isIndividual ? 'btn-plan-solid' : 'btn-plan-outline'}
+        disabled={Boolean(user && user.plan_id === plan.id)}
         onClick={() => onSelectPlan(plan)}
       >
         {user && user.plan_id === plan.id ? 'Current Plan' : buttonLabel}

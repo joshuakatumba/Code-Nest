@@ -41,6 +41,7 @@ class Course(Base):
     old_price_usd = Column(Float, nullable=False)
     banner_key = Column(String, nullable=False)
     rating_avg = Column(Float, default=4.0, nullable=False)
+    video_url = Column(String, nullable=True)
 
 
 class Module(Base):

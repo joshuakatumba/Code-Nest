@@ -177,3 +177,98 @@ def test_projects_plan_subscribe_and_newsletter() -> None:
         json={"email": f"news_{uuid.uuid4().hex[:6]}@codenest.ug"},
     )
     assert newsletter_response.status_code == 201
+
+
+
+def test_dynamic_video_uploads_reviews_projects_and_access_code() -> None:
+    email = create_unique_email()
+    signup_response = client.post(
+        "/api/auth/signup",
+        json={"name": "Wasswa", "email": email, "password": "password123"},
+    )
+    assert signup_response.status_code == 201
+    token = signup_response.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Enroll via access code
+    code_enroll = client.post(
+        "/api/courses/enroll-code",
+        headers=headers,
+        json={"access_code": "SCRATCH1"},
+    )
+    assert code_enroll.status_code == 201
+    scratch_course_id = code_enroll.json()["course_id"]
+
+    # Upload video to course
+    fake_mp4 = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
+    course_video_res = client.post(
+        f"/api/courses/{scratch_course_id}/video",
+        headers={
+            **headers,
+            "Content-Type": "video/mp4",
+            "X-Filename": "scratch_demo.mp4",
+        },
+        content=fake_mp4,
+    )
+    assert course_video_res.status_code == 200
+    assert course_video_res.json()["video_url"].startswith("/uploads/videos/")
+
+    # Create a new lesson on the course and upload a lesson video from the course side
+    course_detail = course_video_res.json()
+    first_module_id = course_detail["modules"][0]["id"]
+    new_lesson_res = client.post(
+        f"/api/courses/{scratch_course_id}/lessons",
+        headers=headers,
+        json={
+            "module_id": first_module_id,
+            "title": "2. Custom Uploaded Sprite Lesson",
+            "duration_label": "15:00",
+        },
+    )
+    assert new_lesson_res.status_code == 201
+    new_lesson_id = new_lesson_res.json()["id"]
+
+    lesson_video_res = client.post(
+        f"/api/courses/{scratch_course_id}/lessons/{new_lesson_id}/video",
+        headers={
+            **headers,
+            "Content-Type": "video/mp4",
+            "X-Filename": "sprite_lesson.mp4",
+        },
+        content=fake_mp4,
+    )
+    assert lesson_video_res.status_code == 200
+    assert lesson_video_res.json()["video_url"].startswith("/uploads/videos/")
+
+    # Submit a 5-star review
+    review_res = client.post(
+        f"/api/courses/{scratch_course_id}/reviews",
+        headers=headers,
+        json={"stars": 5},
+    )
+    assert review_res.status_code == 201
+    assert review_res.json()["total"] >= 1
+
+    # Create a custom student project
+    project_res = client.post(
+        "/api/projects",
+        headers=headers,
+        json={
+            "course_id": scratch_course_id,
+            "title": "Kampala Traffic Light Simulator",
+            "description": "Scratch traffic control simulation.",
+            "preview_key": "scratch",
+        },
+    )
+    assert project_res.status_code == 201
+    assert project_res.json()["title"] == "Kampala Traffic Light Simulator"
+
+    # Check course-filtered progress
+    progress_res = client.get(
+        f"/api/progress?course_id={scratch_course_id}",
+        headers=headers,
+    )
+    assert progress_res.status_code == 200
+    progress_body = progress_res.json()
+    assert progress_body["active_course_id"] == scratch_course_id
+    assert len(progress_body["enrolled_courses"]) >= 1
