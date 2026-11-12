@@ -13,6 +13,12 @@ os.makedirs(os.path.join(UPLOAD_ROOT, "videos"), exist_ok=True)
 
 app = FastAPI(title="CodeNest API", version="1.0.0")
 
+extra_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -20,7 +26,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:8002",
         "http://127.0.0.1:8002",
+        *extra_origins,
     ],
+    allow_origin_regex=r"https://.*\.(vercel\.app|onrender\.com)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
