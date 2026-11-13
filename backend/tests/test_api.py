@@ -272,3 +272,85 @@ def test_dynamic_video_uploads_reviews_projects_and_access_code() -> None:
     progress_body = progress_res.json()
     assert progress_body["active_course_id"] == scratch_course_id
     assert len(progress_body["enrolled_courses"]) >= 1
+
+
+def test_security_and_integrity_guards() -> None:
+    email = create_unique_email()
+    signup_response = client.post(
+        "/api/auth/signup",
+        json={"name": "Namono", "email": email, "password": "password123"},
+    )
+    assert signup_response.status_code == 201
+    token = signup_response.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    courses = client.get("/api/courses").json()
+    course_id = courses[0]["id"]
+
+    # Reject non-video bytes
+    bad_upload = client.post(
+        f"/api/courses/{course_id}/video",
+        headers={**headers, "Content-Type": "video/mp4", "X-Filename": "evil.mp4"},
+        content=b"<html><script>alert(1)</script></html>",
+    )
+    assert bad_upload.status_code == 400
+
+    # Reject unsafe video_url scheme
+    bad_url = client.post(
+        f"/api/courses/{course_id}/video",
+        headers=headers,
+        json={"video_url": "javascript:alert(1)"},
+    )
+    assert bad_url.status_code == 400
+
+    # Review upsert: submitting twice as the same user does not inflate review count
+    first_review = client.post(
+        f"/api/courses/{course_id}/reviews",
+        headers=headers,
+        json={"stars": 5},
+    )
+    assert first_review.status_code == 201
+    total_after_first = first_review.json()["total"]
+
+    second_review = client.post(
+        f"/api/courses/{course_id}/reviews",
+        headers=headers,
+        json={"stars": 4},
+    )
+    assert second_review.status_code == 201
+    assert second_review.json()["total"] == total_after_first
+
+    # Quiz competency farming guard
+    progress_before = client.get("/api/progress", headers=headers).json()
+    quiz_id = progress_before["quizzes"][0]["id"]
+    first_submit = client.post(
+        f"/api/quizzes/{quiz_id}/submit",
+        headers=headers,
+        json={"answers": [1, 2]},
+    )
+    assert first_submit.status_code == 200
+    comp_after_first = client.get("/api/progress", headers=headers).json()["competencies"]
+
+    second_submit = client.post(
+        f"/api/quizzes/{quiz_id}/submit",
+        headers=headers,
+        json={"answers": [1, 2]},
+    )
+    assert second_submit.status_code == 200
+    comp_after_second = client.get("/api/progress", headers=headers).json()["competencies"]
+    assert comp_after_second == comp_after_first
+
+    # Nonexistent course_id returns 404 on progress and project creation
+    missing_progress = client.get("/api/progress?course_id=999999", headers=headers)
+    assert missing_progress.status_code == 404
+
+    missing_project_course = client.post(
+        "/api/projects",
+        headers=headers,
+        json={
+            "course_id": 999999,
+            "title": "Invalid Course Project",
+            "description": "Should return 404",
+        },
+    )
+    assert missing_project_course.status_code == 404

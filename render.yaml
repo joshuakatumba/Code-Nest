@@ -1,27 +1,13 @@
 services:
   - type: web
-    name: codenest-backend
+    name: codenest-app
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         value: sqlite:///./codenest.db
       - key: SECRET_KEY
         generateValue: true
-
-  - type: web
-    name: codenest-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        value: https://codenest-backend.onrender.com/api
 

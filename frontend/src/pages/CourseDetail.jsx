@@ -99,6 +99,7 @@ export default function CourseDetail() {
 
   const handleCourseVideoUpload = async (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || !course) {
       return;
     }
@@ -441,6 +442,7 @@ export default function CourseDetail() {
                                         disabled={isUploadingThis}
                                         onChange={(event) => {
                                           const file = event.target.files?.[0];
+                                          event.target.value = '';
                                           if (file) {
                                             handleLessonVideoUpload(lesson.id, file);
                                           }

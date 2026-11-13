@@ -176,6 +176,11 @@ def get_progress(
         active_course_id = python_course.id if python_course else 1
 
     active_course = db.query(Course).filter(Course.id == active_course_id).first()
+    if course_id is not None and active_course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
     if active_course is not None:
         ensure_course_projects_for_user(db, current_user.id, active_course)
         db.commit()

@@ -45,6 +45,7 @@ export default function VirtualClassroomStage({
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (file && activeLesson && onUploadLessonVideo) {
       onUploadLessonVideo(activeLesson.id, file);
     }

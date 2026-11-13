@@ -25,11 +25,27 @@ from auth import get_current_user
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
-VIDEOS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "uploads",
-    "videos",
+UPLOAD_ROOT = os.getenv(
+    "UPLOAD_DIR",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads"),
 )
+VIDEOS_DIR = os.path.join(UPLOAD_ROOT, "videos")
+MAX_VIDEO_BYTES = 50 * 1024 * 1024
+
+
+def is_valid_video_bytes(data: bytes) -> bool:
+    if len(data) < 12:
+        return False
+    # MP4 / MOV container ('ftyp' box at offset 4)
+    if data[4:8] == b"ftyp":
+        return True
+    # WebM / Matroska (EBML header)
+    if data.startswith(b"\x1a\x45\xdf\xa3"):
+        return True
+    # Ogg video container
+    if data.startswith(b"OggS"):
+        return True
+    return False
 
 
 def sanitize_video_filename(original_name: str, prefix: str) -> str:
@@ -64,12 +80,25 @@ def extract_multipart_payload(raw_body: bytes, content_type: str) -> tuple[bytes
 
 async def save_uploaded_video_from_request(request: Request, prefix: str) -> str:
     os.makedirs(VIDEOS_DIR, exist_ok=True)
+    content_length_header = request.headers.get("content-length")
+    if content_length_header and content_length_header.isdigit():
+        if int(content_length_header) > MAX_VIDEO_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Video file exceeds the 50 MB upload limit",
+            )
+
     content_type = request.headers.get("content-type", "").lower()
     raw_body = await request.body()
     if not raw_body:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Empty video payload",
+        )
+    if len(raw_body) > MAX_VIDEO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="Video file exceeds the 50 MB upload limit",
         )
 
     if "application/json" in content_type:
@@ -81,10 +110,14 @@ async def save_uploaded_video_from_request(request: Request, prefix: str) -> str
                 detail="Invalid JSON payload",
             ) from exc
         video_url = str(payload.get("video_url", "")).strip()
-        if not video_url:
+        if not video_url or not (
+            video_url.startswith("https://")
+            or video_url.startswith("http://")
+            or video_url.startswith("/uploads/")
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="video_url is required",
+                detail="video_url must be a valid http(s) or /uploads/ URL",
             )
         return video_url
 
@@ -94,10 +127,10 @@ async def save_uploaded_video_from_request(request: Request, prefix: str) -> str
         file_bytes = raw_body
         original_name = request.headers.get("x-filename", "lesson_video.mp4")
 
-    if not file_bytes:
+    if not file_bytes or not is_valid_video_bytes(file_bytes):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No video bytes found in upload",
+            detail="Unsupported or invalid video file. Upload MP4, WebM, or Ogg video.",
         )
 
     safe_name = sanitize_video_filename(original_name, prefix)
@@ -551,12 +584,24 @@ def submit_course_review(
             detail="Course not found",
         )
     stars_clamped = max(1, min(5, int(payload.stars)))
-    review = Review(
-        course_id=course_id,
-        user_id=current_user.id,
-        stars=stars_clamped,
+    existing_review = (
+        db.query(Review)
+        .filter(
+            Review.course_id == course_id,
+            Review.user_id == current_user.id,
+        )
+        .first()
     )
-    db.add(review)
+    if existing_review is not None:
+        existing_review.stars = stars_clamped
+    else:
+        db.add(
+            Review(
+                course_id=course_id,
+                user_id=current_user.id,
+                stars=stars_clamped,
+            )
+        )
     db.flush()
     summary = compute_review_summary(db, course_id)
     course.rating_avg = summary.avg

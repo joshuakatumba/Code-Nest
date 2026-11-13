@@ -57,6 +57,11 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
+  if (response.status === 401 && token) {
+    setToken(null);
+    window.dispatchEvent(new Event('codenest:unauthorized'));
+  }
+
   if (!response.ok) {
     throw await parseErrorResponse(response);
   }
@@ -86,6 +91,11 @@ async function uploadVideoEndpoint(endpoint, fileOrUrl) {
     headers,
     body: fileOrUrl,
   });
+
+  if (response.status === 401 && token) {
+    setToken(null);
+    window.dispatchEvent(new Event('codenest:unauthorized'));
+  }
 
   if (!response.ok) {
     throw await parseErrorResponse(response);

@@ -1,0 +1,28 @@
+# Git and IDE metadata
+.git
+.gitignore
+.vscode
+.idea
+
+# Python local environment & cache
+backend/.venv
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+.pytest_cache
+
+# Local env files and local SQLite database
+backend/.env
+frontend/.env
+backend/*.db
+*.db
+
+# Frontend build & node_modules
+frontend/node_modules
+frontend/dist
+
+# Prototype / design assets not needed in container
+Home.png
+index.html
+PROGRESS.md
+

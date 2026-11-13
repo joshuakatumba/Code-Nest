@@ -8,10 +8,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('codenest:unauthorized', handleUnauthorized);
+
     const token = localStorage.getItem('codenest_token');
     if (!token) {
       setLoading(false);
-      return;
+      return () => window.removeEventListener('codenest:unauthorized', handleUnauthorized);
     }
     api
       .getMe()
@@ -25,6 +31,8 @@ export function AuthProvider({ children }) {
       .finally(() => {
         setLoading(false);
       });
+
+    return () => window.removeEventListener('codenest:unauthorized', handleUnauthorized);
   }, []);
 
   const loginUser = async (email, password) => {

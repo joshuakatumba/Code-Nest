@@ -37,6 +37,13 @@ def create_project(
     if target_course_id is None:
         default_course = db.query(Course).order_by(Course.level.asc()).first()
         target_course_id = default_course.id if default_course else 1
+    else:
+        target_course = db.query(Course).filter(Course.id == target_course_id).first()
+        if target_course is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found",
+            )
 
     new_project = Project(
         user_id=current_user.id,

@@ -58,6 +58,7 @@ export default function Home() {
 
   const handleQuickVideoUpload = async (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || !selectedCourseId) {
       return;
     }

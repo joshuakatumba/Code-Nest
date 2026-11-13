@@ -86,6 +86,16 @@ def submit_quiz(
             )
         )
 
+    prior_passing_attempt = (
+        db.query(QuizAttempt)
+        .filter(
+            QuizAttempt.user_id == current_user.id,
+            QuizAttempt.quiz_id == quiz.id,
+            QuizAttempt.score > 0,
+        )
+        .first()
+    )
+
     attempt = QuizAttempt(
         user_id=current_user.id,
         quiz_id=quiz.id,
@@ -93,7 +103,7 @@ def submit_quiz(
     )
     db.add(attempt)
 
-    if score > 0:
+    if score > 0 and prior_passing_attempt is None:
         competencies = (
             db.query(Competency)
             .filter(Competency.user_id == current_user.id)

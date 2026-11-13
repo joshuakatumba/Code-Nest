@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 ensure_schema_columns()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_ROOT = os.path.join(BASE_DIR, "uploads")
+UPLOAD_ROOT = os.getenv("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads"))
 os.makedirs(os.path.join(UPLOAD_ROOT, "videos"), exist_ok=True)
 
 app = FastAPI(title="CodeNest API", version="1.0.0")
