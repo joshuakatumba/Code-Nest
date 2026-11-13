@@ -33,11 +33,7 @@ export default function Pricing() {
     setErrorMessage('');
     setInfoMessage('');
     if (!user) {
-      if (plan.name === 'Free') {
-        navigate('/courses');
-      } else {
-        navigate('/signup');
-      }
+      navigate('/signup');
       return;
     }
     try {

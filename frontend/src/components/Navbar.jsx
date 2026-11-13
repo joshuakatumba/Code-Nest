@@ -21,8 +21,12 @@ export default function Navbar() {
     navigate('/courses');
   };
 
-  const planNames = { 1: 'Free Plan', 2: 'Individual Plan', 3: 'Corporate Plan' };
-  const activePlanLabel = user?.plan_id ? planNames[user.plan_id] || 'Active Plan' : 'Free Plan';
+  const planNames = {
+    1: 'School program',
+    2: 'Holiday club, 2 weeks',
+    3: 'Workbook and USB pack',
+  };
+  const activePlanLabel = user?.plan_id ? planNames[user.plan_id] || 'Active Plan' : 'School program';
 
   return (
     <div className={isHome ? 'navbar-home-wrapper' : ''}>

@@ -17,15 +17,23 @@ from models import (
 from auth import hash_password
 
 
-def get_or_create_plan(
-    db: Session, name: str, price_usd: float, period: str, features: list[str]
+def upsert_plan_slot(
+    db: Session,
+    legacy_names: list[str],
+    name: str,
+    price_usd: float,
+    period: str,
+    features: list[str],
 ) -> Plan:
     plan = db.query(Plan).filter(Plan.name == name).first()
+    if plan is None:
+        plan = db.query(Plan).filter(Plan.name.in_(legacy_names)).first()
     if plan is None:
         plan = Plan(name=name, price_usd=price_usd, period=period, features=features)
         db.add(plan)
         db.flush()
     else:
+        plan.name = name
         plan.price_usd = price_usd
         plan.period = period
         plan.features = features
@@ -328,40 +336,43 @@ def seed_database() -> None:
     ensure_schema_columns()
     db = SessionLocal()
     try:
-        get_or_create_plan(
+        school_plan = upsert_plan_slot(
             db,
-            name="Free",
-            price_usd=0.0,
-            period="FOREVER",
+            legacy_names=["Free"],
+            name="School program",
+            price_usd=30000.0,
+            period="per student per term",
             features=[
-                "Basic Class on Python",
-                "3 Quizzes per day",
-                "Limited Code Challenges",
+                "Full term Scratch & Python curriculum",
+                "Offline-ready classroom lessons & quizzes",
+                "CBC competency tracking dashboard",
+                "End-of-term student project showcase",
             ],
         )
-        individual_plan = get_or_create_plan(
+        upsert_plan_slot(
             db,
-            name="Individual",
-            price_usd=24.0,
-            period="MONTH",
+            legacy_names=["Individual"],
+            name="Holiday club, 2 weeks",
+            price_usd=60000.0,
+            period="per participant",
             features=[
-                "Unlimited Quizzes",
-                "Advanced Classes",
-                "Certifications for All",
-                "Unlimited Code Challenges",
-                "Project Templates",
+                "2-week intensive hands-on coding camp",
+                "Guided Ugandan problem-solving projects",
+                "Daily mentor feedback & challenges",
+                "Certificate of completion",
             ],
         )
-        get_or_create_plan(
+        upsert_plan_slot(
             db,
-            name="Corporate",
-            price_usd=32.0,
-            period="EDITOR",
+            legacy_names=["Corporate"],
+            name="Workbook and USB pack",
+            price_usd=25000.0,
+            period="per new student",
             features=[
-                "Unlock All Features",
-                "Work With Teams",
-                "Unlimited Challenges",
-                "Starter Templates",
+                "Printed CodeNest student workbook",
+                "Offline USB installer (Scratch & Thonny)",
+                "Starter project templates & datasets",
+                "Take-home practice worksheets",
             ],
         )
 
@@ -370,7 +381,7 @@ def seed_database() -> None:
             name="Katumba",
             email="katumba@codenest.ug",
             password="password123",
-            plan_id=individual_plan.id,
+            plan_id=school_plan.id,
         )
 
         course_one = get_or_create_course(

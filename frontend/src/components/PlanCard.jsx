@@ -1,29 +1,33 @@
 import React from 'react';
 
 export default function PlanCard({ plan, user, onSelectPlan }) {
-  const isIndividual = plan.name === 'Individual';
-  const isFree = plan.name === 'Free';
-  const checkClass = isFree
-    ? 'check-grey'
-    : isIndividual
+  const isSchool = plan.name === 'School program';
+  const isHoliday = plan.name === 'Holiday club, 2 weeks';
+
+  const checkClass = isSchool
     ? 'check-yellow'
-    : 'check-mint';
-  const buttonLabel = isFree
-    ? 'Try for free'
-    : isIndividual
-    ? 'Regular license'
-    : 'Extended license';
+    : isHoliday
+    ? 'check-mint'
+    : 'check-grey';
+
+  const buttonLabel = isSchool
+    ? 'Select School Program'
+    : isHoliday
+    ? 'Join Holiday Club'
+    : 'Order Starter Pack';
+
+  const formattedAmount = `UGX ${Math.round(plan.price_usd).toLocaleString('en-US')}`;
 
   return (
-    <div className={`price-card ${isIndividual ? 'featured' : ''}`}>
+    <div className={`price-card ${isSchool ? 'featured' : ''}`}>
       <div>
         <div className="price-card-header">
-          {!isFree && <span className="plan-tier">{plan.name}</span>}
-          {isIndividual && <span className="badge-best">BEST!</span>}
+          <span className="plan-tier">{plan.name}</span>
+          {isSchool && <span className="badge-best">POPULAR</span>}
         </div>
         <div className="price-amount">
-          {isFree ? 'Free' : `$${plan.price_usd}`}{' '}
-          <span className="price-period">/ {plan.period}</span>
+          {formattedAmount}{' '}
+          <span className="price-period">{plan.period}</span>
         </div>
         <ul className="feature-list">
           {plan.features.map((featureText) => (
@@ -38,7 +42,7 @@ export default function PlanCard({ plan, user, onSelectPlan }) {
       </div>
       <button
         type="button"
-        className={isIndividual ? 'btn-plan-solid' : 'btn-plan-outline'}
+        className={isSchool ? 'btn-plan-solid' : 'btn-plan-outline'}
         disabled={Boolean(user && user.plan_id === plan.id)}
         onClick={() => onSelectPlan(plan)}
       >
